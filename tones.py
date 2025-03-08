@@ -10,9 +10,9 @@ TONE_MAP = {
     'ü': ['ǖ', 'ǘ', 'ǚ', 'ǜ', 'ü']
 }
 
-VOWELS = list(TONE_MAP.keys())
+VOWELS = "aeiouü"
 
-WORD_PATTERN = re.compile(r"([a-z]{2,})([1-5]{1})?")
+WORD_PATTERN = r"([a-z]{2,})([1-5]{1})?"
 
 def vowel_positions(pinyin: Union[str, list[chr]]) -> dict[chr, int]:
     present_vowels: dict[chr, int] = {}
@@ -57,7 +57,7 @@ def apply_tone(pinyin: str, tone: int) -> str:
 
 
 def convert_numeric_word(pinyin: str) -> str:
-    matches = WORD_PATTERN.findall(pinyin)
+    matches = re.findall(WORD_PATTERN, pinyin)
 
     corrected_pinyin: str = ""
     for numeric_pinyin in matches:

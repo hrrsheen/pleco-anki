@@ -14,18 +14,6 @@ VOWELS = "aeiouü"
 
 WORD_PATTERN = r"([a-zA-Z]{2,})([1-5]{1})?"
 
-# def vowel_positions(pinyin: Union[str, list[chr]]) -> dict[chr, int]:
-#     present_vowels: dict[chr, int] = {}
-
-#     last_vowel: int = 0
-#     for i, c in enumerate(pinyin):
-#         if c in VOWELS:
-#             last_vowel = i
-#             present_vowels[c] = i
-#     present_vowels['l'] = last_vowel
-
-#     return present_vowels
-
 
 def apply_tone(pinyin: str, tone: int) -> str:
     tone_index = tone - 1

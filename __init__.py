@@ -10,7 +10,7 @@ from aqt.qt import *  # import all of the Qt GUI library
 from aqt.utils import qconnect  # import the "show info" tool from utils.py
 
 from .card_convert import AnkiDeck, AnkiNotes, parse_pleco_xml
-from .ui.main_widget import Ui_Dialog
+from .ui.import_ui import Ui_Dialog
 
 
 tr = partial(QCoreApplication.translate, "Dialog")
@@ -48,12 +48,13 @@ class ImportDialog(QDialog):
     def perform_import(self):
         pleco_file = self.dialog.line_file.text()
         deck_name = self.dialog.select_deck.currentText()
+        set_overwrite = self.dialog.checkbox_overwrite.isChecked()
         set_new = self.dialog.checkbox_new.isChecked()
 
         # Set the import operation to run in the background.
         op = QueryOp(
             parent=mw,
-            op=lambda _: self.import_pleco(pleco_file, deck_name, set_new),
+            op=lambda _: self.import_pleco(pleco_file, deck_name, set_overwrite, set_new),
             success=self.import_success,   
         )
 
@@ -63,7 +64,7 @@ class ImportDialog(QDialog):
         # Run the import operation.
         op.with_progress().run_in_background()
 
-    def import_pleco(self, xml_file: str, deck_name: str, set_new: bool):
+    def import_pleco(self, xml_file: str, deck_name: str, set_overwrite: str, set_new: bool):
         print("Importing deck from: " + xml_file + " -> to deck: " + deck_name )
         flashcards = parse_pleco_xml(xml_file)
         
@@ -80,11 +81,11 @@ class ImportDialog(QDialog):
                     note_fields = [f.name for f in fields(card.content)]
                     self.notes_custom = AnkiNotes.init_from_filenames("CustomPleco", note_fields, [("./front.html", "./back.html")], "./card.css")
 
-                modified_notes = self.notes_custom.create_note(deck.id, asdict(card.content), set_new)
-                deck.reset_cards([card_id 
-                                  for note_id, dupe in modified_notes if dupe 
-                                  for card_id in deck.cards_for_note(note_id)])
-                
+                modified_notes = self.notes_custom.create_note(deck.id, asdict(card.content), set_overwrite)
+                if set_new:
+                    deck.reset_cards([card_id 
+                                      for note_id, dupe in modified_notes if dupe 
+                                      for card_id in deck.cards_for_note(note_id)])
         
         return 0
 

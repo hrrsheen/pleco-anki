@@ -1,12 +1,18 @@
+from __future__ import annotations
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from xml.etree import ElementTree as ET
 
-from anki import collection, decks, models, notes
+from anki import collection, models
 from aqt import mw
 
 from .string_parsing import contains_pua
 from .tones import convert_numeric_sentence
+
+if TYPE_CHECKING:
+    from anki.cards import Card, CardId
+    from anki.decks import Deck, DeckId
+    from anki.notes import Note, NoteId
 
 NOTE_TYPE_NAME = "PlecoImports"
 
@@ -39,10 +45,10 @@ class AnkiNotes:
     Manages the creation of Anki notes.
     """
     def __init__(self, model_name: str, ordered_fields: list[str], templates: list[CardTemplate], css: str=""):
-        self.collection = mw.col
+        collection = mw.col
         self.fields = ordered_fields
 
-        model_manager = self.collection.models
+        model_manager = collection.models
         # Create the Note Type (model) if it doesn't already exist.
         self.model = model_manager.by_name(model_name)
         new = False
@@ -79,6 +85,10 @@ class AnkiNotes:
     @property
     def id(self) -> models.NotetypeId:
         return self.model["id"]
+    
+    @property
+    def name(self) -> str:
+        return self.model["name"]
 
     @classmethod
     def init_from_filenames(cls, model_name: str, ordered_fields: list[str], templates: list[tuple[str, str]], css_filename: str=""):
@@ -90,15 +100,69 @@ class AnkiNotes:
 
         return cls(model_name, ordered_fields, template_contents, css)
     
-    def create_note(self, deck_id: decks.DeckId, card: dict[str, str]) -> notes.Note:
-        fields = [card[f] for f in self.fields]
+    def create_note(self, deck_id: DeckId, card: dict[str, str], overwrite=False) -> list[tuple[NoteId, bool]]:
+        collection = mw.col
+        field_values = [card[f] for f in self.fields]
 
-        note = self.collection.new_note(self.model)
-        note.fields = fields
+        dupe_ids = collection.find_notes(
+            collection.build_search_string(f"{self.fields[0]}:{field_values[0]} AND note:{self.name} AND did:{deck_id}")
+        )
 
-        self.collection.add_note(note, deck_id)
+        # If there's duplicates and they aren't being modified, no action needs to be taken.
+        if dupe_ids and not overwrite:
+            return []
 
-        return note
+        modified_ids: list[tuple[NoteId, bool]] = []
+        # Update all duplicates with the newly given field values.
+        if dupe_ids:
+            notes: list[Note] = []
+            for note_id in dupe_ids:
+                note = collection.get_note(note_id)
+                note.fields = field_values
+                notes.append(note)
+                modified_ids.append((note_id, True))
+            collection.update_notes(notes)
+        # Create a new note with the given field values.
+        else:
+            note = collection.new_note(self.model)
+            note.fields = field_values
+            collection.add_note(note, deck_id)
+
+            modified_ids.append((note.id, True))
+
+        return modified_ids
+    
+
+class AnkiDeck:
+    def __init__(self, name):
+        collection = mw.col
+
+        deck_id = collection.decks.id_for_name(name)
+        if not deck_id:
+            deck = collection.decks.new_deck()
+            deck.name = name
+            collection.decks.add_deck(deck)
+            deck_id = collection.decks.id_for_name(name)
+        
+        self._id = deck_id
+    
+    @property
+    def id(self):
+        return self._id
+    
+    def cards_for_note(self, note_id: NoteId) -> list[CardId]:
+        collection = mw.col
+
+        return collection.find_cards(
+            collection.build_search_string(f"nid:{note_id} AND did:{self.id}")
+        )
+
+    def reset_cards(self, card_ids: list[CardId]):
+        if len(card_ids) == 0:
+            return
+        
+        collection = mw.col
+        collection.sched.schedule_cards_as_new(card_ids)
     
 
 def parse_pleco_xml(filename: str) -> list[Flashcard]:

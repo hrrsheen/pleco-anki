@@ -1,16 +1,17 @@
-from dataclasses import asdict, fields, Field
+from dataclasses import asdict, fields
 from functools import partial
 from os.path import dirname
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from aqt import mw  # import the main window object (mw) from aqt
 from aqt.operations import QueryOp
 from aqt.qt import *  # import all of the Qt GUI library
 from aqt.utils import qconnect  # import the "show info" tool from utils.py
 
-from .card_convert import AnkiNotes, CardTemplate, Flashcard, NoteContent, parse_pleco_xml
+from .card_convert import AnkiDeck, AnkiNotes, parse_pleco_xml
 from .ui.main_widget import Ui_Dialog
+
 
 tr = partial(QCoreApplication.translate, "Dialog")
 
@@ -22,7 +23,7 @@ class ImportDialog(QDialog):
         self.connect_signals()
 
         # Holds the last directory that the user opened when browsing for the Pleco XML file.
-        self.last_dir = str(Path.home())
+        self.last_dir = str(Path.home()) + "/projects/pleco-anki"
 
         self.notes_custom: Optional[AnkiNotes] = None   # Note handler for custom user flashcards.
         self.notes_dict: Optional[AnkiNotes] = None     # Note handler for Pleco dictionary flashcards.
@@ -47,11 +48,12 @@ class ImportDialog(QDialog):
     def perform_import(self):
         pleco_file = self.dialog.line_file.text()
         deck_name = self.dialog.select_deck.currentText()
+        set_new = self.dialog.checkbox_new.isChecked()
 
         # Set the import operation to run in the background.
         op = QueryOp(
             parent=mw,
-            op=lambda _: self.import_pleco(pleco_file, deck_name),
+            op=lambda _: self.import_pleco(pleco_file, deck_name, set_new),
             success=self.import_success,   
         )
 
@@ -61,20 +63,14 @@ class ImportDialog(QDialog):
         # Run the import operation.
         op.with_progress().run_in_background()
 
-    def import_pleco(self, xml_file: str, deck_name: str):
+    def import_pleco(self, xml_file: str, deck_name: str, set_new: bool):
         print("Importing deck from: " + xml_file + " -> to deck: " + deck_name )
         flashcards = parse_pleco_xml(xml_file)
         
         # Open / create the selected deck.
         collection = mw.col
-        deck_id = collection.decks.id_for_name(deck_name)
-        if not deck_id:
-            deck = collection.decks.new_deck()
-            deck.name = deck_name
-            collection.decks.add_deck(deck)
-            deck_id = collection.decks.id_for_name(deck_name)
 
-        # collection.decks.get(deck_id)["mid"]
+        deck = AnkiDeck(deck_name)
         for card in flashcards:
             if card.dict_type:
                 pass # TODO We'll come back to this.
@@ -84,7 +80,11 @@ class ImportDialog(QDialog):
                     note_fields = [f.name for f in fields(card.content)]
                     self.notes_custom = AnkiNotes.init_from_filenames("CustomPleco", note_fields, [("./front.html", "./back.html")], "./card.css")
 
-                new_note = self.notes_custom.create_note(deck_id, asdict(card.content))
+                modified_notes = self.notes_custom.create_note(deck.id, asdict(card.content), set_new)
+                deck.reset_cards([card_id 
+                                  for note_id, dupe in modified_notes if dupe 
+                                  for card_id in deck.cards_for_note(note_id)])
+                
         
         return 0
 

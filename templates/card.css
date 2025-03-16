@@ -1,0 +1,50 @@
+hr {
+    height: 3px;
+    background: white;
+    border: none;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+div {
+    margin-bottom: 10px
+}
+
+.card {
+    font-family: Arial; 
+    font-size: 10px; 
+    text-align: left; 
+    background-color: rgb(47,47,49);
+    color: rgb(255,255,255);
+    padding: 20px;
+}
+
+.headword {
+    font-size: 35px;
+    border-bottom: 3px solid rgba(0,0,0,0);
+    transition: border 0.5s ease,  padding 0.5s ease;
+    margin-top: 20px;
+}
+
+.defn {
+    font-family: Didot; 
+    font-size: 20px;
+}
+
+.pron {
+    font-family: Palatino; 
+    font-size: 22px; 
+    color: #55DD55; 
+    text-align:left;
+}
+
+.pron.whover {
+    opacity: 0;
+}
+
+.headword.front:hover + .pron.whover {
+    cursor: pointer;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+    white-space: nowrap;
+}

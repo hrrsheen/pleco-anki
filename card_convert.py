@@ -6,6 +6,7 @@ from xml.etree import ElementTree as ET
 from anki import collection, models
 from aqt import mw
 
+from .card_templates import *
 from .string_parsing import contains_pua
 from .tones import convert_numeric_sentence
 
@@ -33,12 +34,16 @@ class CardTemplate:
     front_html:     str
     back_html:      str
 
-    def __post_init__(self):
-        with open(self.front_html, "r") as file:
-            self.front_html = file.read()
+    @classmethod
+    def from_files(cls, front_filename: str, back_filename: str) -> CardTemplate:
+        with open(front_filename, "r") as file:
+            front = file.read()
 
-        with open(self.back_html, "r") as file:
-            self.back_html = file.read()
+        with open(back_filename, "r") as file:
+            back = file.read()
+
+        return CardTemplate(front, back)
+        
 
 class AnkiNotes:
     """
@@ -91,8 +96,8 @@ class AnkiNotes:
         return self.model["name"]
 
     @classmethod
-    def init_from_filenames(cls, model_name: str, ordered_fields: list[str], templates: list[tuple[str, str]], css_filename: str=""):
-        template_contents = [CardTemplate(front, back) for  front, back in templates]
+    def init_from_filenames(cls, model_name: str, ordered_fields: list[str], templates: list[tuple[str, str]], css_filename: str="") -> AnkiNotes:
+        template_contents = [CardTemplate.from_files(front, back) for  front, back in templates]
         css = ""
         if css_filename:
             with open(css_filename, "r") as css_file:

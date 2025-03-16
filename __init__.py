@@ -1,6 +1,6 @@
 from dataclasses import asdict, fields
 from functools import partial
-from os.path import dirname
+from os.path import dirname, realpath
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
@@ -23,7 +23,7 @@ class ImportDialog(QDialog):
         self.connect_signals()
 
         # Holds the last directory that the user opened when browsing for the Pleco XML file.
-        self.last_dir = str(Path.home()) + "/projects/pleco-anki"
+        self.last_dir = str(Path.home())
 
         self.notes_custom: Optional[AnkiNotes] = None   # Note handler for custom user flashcards.
         self.notes_dict: Optional[AnkiNotes] = None     # Note handler for Pleco dictionary flashcards.
@@ -41,7 +41,7 @@ class ImportDialog(QDialog):
         tr = partial(QCoreApplication.translate, "Dialog")
         
         selected_xml, _ = QFileDialog.getOpenFileName(self, tr("Open the exported Pleco deck"), self.last_dir, "XML files (*.xml)")
-        self.last_dir = dirname(selected_xml)
+        self.last_dir = dirname(selected_xml) # Update the last directory that the user looked in.
         if selected_xml:
             self.dialog.line_file.setText(selected_xml)
     
@@ -68,26 +68,30 @@ class ImportDialog(QDialog):
         print("Importing deck from: " + xml_file + " -> to deck: " + deck_name )
         flashcards = parse_pleco_xml(xml_file)
         
-        # Open / create the selected deck.
         collection = mw.col
-
+        tmpl_dir: str = os.path.dirname(os.path.realpath(__file__)) + "/templates/" # The directory path to the template files.
+        # Open / create the selected deck.
         deck = AnkiDeck(deck_name)
+        # Process all flashcards.
         for card in flashcards:
             if card.dict_type:
                 pass # TODO We'll come back to this.
             else:
                 # Load the custom NoteType interface only if some actually exist in the import. 
                 if self.notes_custom is None:
-                    note_fields = [f.name for f in fields(card.content)]
-                    self.notes_custom = AnkiNotes.init_from_filenames("CustomPleco", note_fields, [("./front.html", "./back.html")], "./card.css")
+                    note_fields = [f.name for f in fields(card.content)] # Generate the ordered field names.
+                    self.notes_custom = AnkiNotes.init_from_filenames(
+                        "CustomPleco", note_fields, [(tmpl_dir + "front.html", tmpl_dir + "back.html")], tmpl_dir + "card.css")
 
+                # Create a note for the current flashcard and add it to the deck.
                 modified_notes = self.notes_custom.create_note(deck.id, asdict(card.content), set_overwrite)
                 if set_new:
+                    # Reset the scheduling of any duplicate cards.
                     deck.reset_cards([card_id 
                                       for note_id, dupe in modified_notes if dupe 
                                       for card_id in deck.cards_for_note(note_id)])
         
-        return 0
+        return 0 #TODO Is this needed?
 
     def import_success(self, status: int):
         self.dialog.button_import.setText(tr("Import"))

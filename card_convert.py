@@ -6,7 +6,6 @@ from xml.etree import ElementTree as ET
 from anki import collection, models
 from aqt import mw
 
-from .card_templates import *
 from .string_parsing import contains_pua
 from .tones import convert_numeric_sentence
 

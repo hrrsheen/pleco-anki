@@ -1,6 +1,9 @@
 # The dreaded mark of a Mac user
 .DS_Store
 
+# VSCode
+.vscode
+
 # Project-specific
 *.ui
 *.xml

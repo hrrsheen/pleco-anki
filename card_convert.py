@@ -21,7 +21,8 @@ NOTE_TYPE_NAME = "PlecoImports"
 class NoteContent:
     headword_sc:    str
     pron:           str
-    defn:           list[str]
+    defn:           str
+    reverse:        Optional[str] = ""
 
 @dataclass
 class Flashcard:
@@ -31,8 +32,8 @@ class Flashcard:
 
 @dataclass
 class CardTemplate:
-    front_html:     str
-    back_html:      str
+    front_html:     str # The content of the HTML for the front of a card.
+    back_html:      str # The content of the HTML for the back of a card.
 
     @classmethod
     def from_files(cls, front_filename: str, back_filename: str) -> CardTemplate:
@@ -42,14 +43,16 @@ class CardTemplate:
         with open(back_filename, "r") as file:
             back = file.read()
 
-        return CardTemplate(front, back)
+        return cls(front, back)
         
 
 class AnkiNotes:
+    """This class provides an abstraction for the creation and management of an Anki NoteType (aka Models), 
+    as well as the creation of notes that use said NoteType.
     """
-    Manages the creation of Anki notes.
-    """
+
     def __init__(self, model_name: str, ordered_fields: list[str], templates: list[CardTemplate], css: str=""):
+        """Defines the content of the NoteType. If the NoteType already exists, its fields and templates are overwritten with those provided."""
         collection = mw.col
         self.fields = ordered_fields
 
@@ -89,14 +92,17 @@ class AnkiNotes:
 
     @property
     def id(self) -> models.NotetypeId:
+        """Returns the ID of the NoteType that this model represents."""
         return self.model["id"]
     
     @property
     def name(self) -> str:
+        """Returns the name of the NoteType that this model represents."""
         return self.model["name"]
 
     @classmethod
     def init_from_filenames(cls, model_name: str, ordered_fields: list[str], templates: list[tuple[str, str]], css_filename: str="") -> AnkiNotes:
+        """Instantiates an AnkiNotes object using filenames to fill the template and css information."""
         template_contents = [CardTemplate.from_files(front, back) for  front, back in templates]
         css = ""
         if css_filename:
@@ -105,7 +111,15 @@ class AnkiNotes:
 
         return cls(model_name, ordered_fields, template_contents, css)
     
-    def create_note(self, deck_id: DeckId, card: dict[str, str], overwrite=False) -> list[tuple[NoteId, bool]]:
+    def create_note(self, deck_id: DeckId, card: dict[str, str], overwrite: bool=False) -> list[tuple[NoteId, bool]]:
+        """Creates notes with the provided data and returns the ID of each note creates and whether it already existed in the deck.
+        
+        :param deck_id: The ID of the deck to which to add the note.
+        :param card: A dictionary that maps field names to field values for the note.
+        :param overwrite: If true, for instances in which the headword of a note already exists in the deck, overwrite its content. Ignore otherwise.
+
+        :return A list of tuples. Each tuple represents one note created / modified and contains the note's ID and whether its headword already existed in the deck.
+        """
         collection = mw.col
         field_values = [card[f] for f in self.fields]
 
@@ -139,7 +153,12 @@ class AnkiNotes:
     
 
 class AnkiDeck:
+    """This class provides an abstraction for manipulating an Anki deck with the provided name."""
+
     def __init__(self, name):
+        """Initialises the deck that this class interfaces with.
+        if no deck matches the provided name, one will be created.
+        """
         collection = mw.col
 
         deck_id = collection.decks.id_for_name(name)
@@ -153,9 +172,11 @@ class AnkiDeck:
     
     @property
     def id(self):
+        """Returns the ID of the deck which this class represents."""
         return self._id
     
     def cards_for_note(self, note_id: NoteId) -> list[CardId]:
+        """Returns a list of all cards that were generated for the note with the given ID."""
         collection = mw.col
 
         return collection.find_cards(
@@ -163,6 +184,7 @@ class AnkiDeck:
         )
 
     def reset_cards(self, card_ids: list[CardId]):
+        """Sets the scheduling information to "new" for each card whose ID is in the given list."""
         if len(card_ids) == 0:
             return
         
@@ -171,6 +193,7 @@ class AnkiDeck:
     
 
 def parse_pleco_xml(filename: str) -> list[Flashcard]:
+    """Returns a list of Flashcard objects that contain the parsed and formatted data from a Pleco flashcard XML export."""
     flashcards: list[Flashcard] = []
     
     tree = ET.parse(filename)
@@ -195,10 +218,12 @@ def parse_pleco_xml(filename: str) -> list[Flashcard]:
         
 
 def parse_dict_card(headword: str, pron: str, defn: str) -> Flashcard:
+    """Creates and returns a Flashcard object that contains the data of a dictionary-type Pleco flashcard."""
     definitions = defn.split("\n")
     return Flashcard(NoteContent(headword, convert_numeric_sentence(pron), definitions), True, contains_pua(defn))
 
 def parse_user_card(headword: str, pron: str, defn: str) -> Flashcard:
+    """Creates and returns a Flashcard object that contains the data of a custom Pleco flashcard."""
     return Flashcard(NoteContent(headword, convert_numeric_sentence(pron), defn))
 
 

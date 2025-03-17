@@ -16,6 +16,7 @@ WORD_PATTERN = r"([a-zA-Z]{2,})([1-5]{1})?"
 
 
 def apply_tone(pinyin: str, tone: int) -> str:
+    """Applies the given tone number to the given pinyin for a single Chinese character."""
     tone_index = tone - 1
     new_pinyin: list[chr] = []          # Stores the chatacters to be used in the tonal pinyin.
     capitalisation: list[int] = []      # Stores the position of each capital character.
@@ -56,8 +57,10 @@ def apply_tone(pinyin: str, tone: int) -> str:
 
 
 def convert_numeric_word(pinyin: str) -> str:
-    matches = re.findall(WORD_PATTERN, pinyin)
+    """Takes a single Chinese word of pinyin indicated with tone numbers and returns the same word, indicated with tone marks."""
+    matches = re.findall(WORD_PATTERN, pinyin) # Split the word into the pinyin for its individual characters.
 
+    # For each character (NOT letter), convert from tone numbers to tone marks.
     corrected_pinyin: str = ""
     for numeric_pinyin in matches:
         tone = 5
@@ -68,6 +71,7 @@ def convert_numeric_word(pinyin: str) -> str:
     return corrected_pinyin
 
 def convert_numeric_sentence(sentence: str) -> str:
+    """Takes a sentence of pinyin indicated with tone numbers and returns the same sentence, indicated with tone marks."""
     words: list[str] = sentence.split(" ")
     for i, word in enumerate(words):
         pinyin = convert_numeric_word(word)

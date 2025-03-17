@@ -9,9 +9,12 @@ from aqt.operations import QueryOp
 from aqt.qt import *  # import all of the Qt GUI library
 from aqt.utils import qconnect  # import the "show info" tool from utils.py
 
-from .card_convert import AnkiDeck, AnkiNotes, parse_pleco_xml
+from .card_convert import AnkiDeck, AnkiNotes, CardTemplates, parse_pleco_xml
 from .ui.import_ui import Ui_Dialog
 
+TEMPLATE_DIR: str = os.path.dirname(os.path.realpath(__file__)) + "/templates/" # The directory path to the template files.
+NOTE_TEMPLATE_FILES     = (TEMPLATE_DIR + "front.html", TEMPLATE_DIR + "back.html")
+REVERSE_TEMPLATE_FILES  = (TEMPLATE_DIR + "front_reverse.html", TEMPLATE_DIR + "back_reverse.html")
 
 tr = partial(QCoreApplication.translate, "Dialog")
 
@@ -73,8 +76,6 @@ def import_pleco(xml_file: str, deck_name: str, set_overwrite: str, set_new: boo
     # Read the Pleco XML file and store the data in Flashcard objects.
     flashcards = parse_pleco_xml(xml_file)
     
-    # collection = mw.col
-    tmpl_dir: str = os.path.dirname(os.path.realpath(__file__)) + "/templates/" # The directory path to the template files.
     # Open / create the selected deck.
     deck = AnkiDeck(deck_name)
     # Process all flashcards.
@@ -85,8 +86,7 @@ def import_pleco(xml_file: str, deck_name: str, set_overwrite: str, set_new: boo
             # Load the custom NoteType interface only if some actually exist in the import. 
             if notes_custom is None:
                 note_fields = [f.name for f in fields(card.content)] # Generate the ordered field names.
-                notes_custom = AnkiNotes.init_from_filenames(
-                    "CustomPleco", note_fields, [(tmpl_dir + "front.html", tmpl_dir + "back.html")], tmpl_dir + "card.css")
+                notes_custom = AnkiNotes("CustomPleco", note_fields, CardTemplates([NOTE_TEMPLATE_FILES, REVERSE_TEMPLATE_FILES], TEMPLATE_DIR + "card.css"))
 
             # Create a note for the current flashcard and add it to the deck.
             modified_notes = notes_custom.create_note(deck.id, asdict(card.content), set_overwrite)

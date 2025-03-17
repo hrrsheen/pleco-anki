@@ -31,6 +31,10 @@ div {
     font-size: 20px;
 }
 
+.defn.reverse {
+	font-size: 25px;
+}
+
 .pron {
     font-family: Palatino; 
     font-size: 22px; 

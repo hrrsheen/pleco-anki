@@ -22,6 +22,8 @@ class NoteContent:
     headword_sc:    str
     pron:           str
     defn:           str
+    notes:          Optional[str] = ""
+    audio:          Optional[str] = ""
     reverse:        Optional[str] = ""
 
 @dataclass
@@ -34,16 +36,48 @@ class Flashcard:
 class CardTemplate:
     front_html:     str # The content of the HTML for the front of a card.
     back_html:      str # The content of the HTML for the back of a card.
+    front_js:       Optional[str] = "" # Optional JS script to attach to the end of front_html.
+    back_js:        Optional[str] = "" # Optional JS script to attach to the end of back_html.
 
-    @classmethod
-    def from_files(cls, front_filename: str, back_filename: str) -> CardTemplate:
-        with open(front_filename, "r") as file:
-            front = file.read()
+    @property
+    def front(self):
+        if self.front_js:
+            return self.front_html + f"<script type=\"text/javascript\">{self.front_js}</script>"
+        return self.front_html
+    
+    @property
+    def back(self):
+        if self.back_js:
+            return self.back_html + f"<script type=\"text/javascript\">{self.back_js}</script>"
+        return self.back_html
 
-        with open(back_filename, "r") as file:
-            back = file.read()
+class CardTemplates:
+    """Consolidated multiple card templates (front and back HTML) along with the CSS for a NoteType.
+    JavaScript can also optionally be added to the end of each HTML file."""
 
-        return cls(front, back)
+    def __init__(self, template_files: list[tuple[str, ...]], css_filename: str):
+        """Loads the contents of given filenames into CardTemplate objects.
+        
+        :param template_files: List of tuples where each tuple contains the filenames (with path) used to create a card template.
+                               These filenames are ordered as such:
+                               1. The HTML file for the front of the card.
+                               2. The HTML file for the back of the card.
+                               3. (Optional) The JavaScript file to run with the front-side HTML.
+                               4. (Optional) The JavaScript file to run with the back-side HTML.
+        :param css_filename: The path to the CSS file for the Note Type that this object represents."""
+        with open(css_filename, "r") as file:
+            self.css = file.read()
+
+        def grab_contents(filename: str) -> str:
+            if filename == "":
+                return ""
+            with open(filename, "r") as f:
+                return f.read()
+        
+        self.templates: list[CardTemplate] = []
+        for card_type in  template_files:
+            contents = (grab_contents(side) for side in card_type)
+            self.templates.append(CardTemplate(*contents))
         
 
 class AnkiNotes:
@@ -51,8 +85,9 @@ class AnkiNotes:
     as well as the creation of notes that use said NoteType.
     """
 
-    def __init__(self, model_name: str, ordered_fields: list[str], templates: list[CardTemplate], css: str=""):
-        """Defines the content of the NoteType. If the NoteType already exists, its fields and templates are overwritten with those provided."""
+    def __init__(self, model_name: str, ordered_fields: list[str], templates: CardTemplates):
+        """Defines the content of the NoteType. If the NoteType already exists, 
+        its fields and templates are overwritten with those provided."""
         collection = mw.col
         self.fields = ordered_fields
 
@@ -70,15 +105,15 @@ class AnkiNotes:
                 field = model_manager.new_field(f)
                 model_manager.add_field(self.model, field)
 
-        if css:
-            self.model["css"] = css
+        if templates.css:
+            self.model["css"] = templates.css
 
         # Overwrite / set the card templates for this note type.
-        for i, template in enumerate(templates):
+        for i, template in enumerate(templates.templates):
             templ_name = model_name + " card " + str(i)
             templ = model_manager.new_template(templ_name)
-            templ["qfmt"] = template.front_html
-            templ["afmt"] = template.back_html
+            templ["qfmt"] = template.front
+            templ["afmt"] = template.back
             if i < len(self.model["tmpls"]):
                 self.model["tmpls"][i]["qfmt"] = templ["qfmt"]
                 self.model["tmpls"][i]["afmt"] = templ["afmt"]
@@ -99,26 +134,17 @@ class AnkiNotes:
     def name(self) -> str:
         """Returns the name of the NoteType that this model represents."""
         return self.model["name"]
-
-    @classmethod
-    def init_from_filenames(cls, model_name: str, ordered_fields: list[str], templates: list[tuple[str, str]], css_filename: str="") -> AnkiNotes:
-        """Instantiates an AnkiNotes object using filenames to fill the template and css information."""
-        template_contents = [CardTemplate.from_files(front, back) for  front, back in templates]
-        css = ""
-        if css_filename:
-            with open(css_filename, "r") as css_file:
-                css = css_file.read()
-
-        return cls(model_name, ordered_fields, template_contents, css)
     
     def create_note(self, deck_id: DeckId, card: dict[str, str], overwrite: bool=False) -> list[tuple[NoteId, bool]]:
         """Creates notes with the provided data and returns the ID of each note creates and whether it already existed in the deck.
         
         :param deck_id: The ID of the deck to which to add the note.
         :param card: A dictionary that maps field names to field values for the note.
-        :param overwrite: If true, for instances in which the headword of a note already exists in the deck, overwrite its content. Ignore otherwise.
+        :param overwrite: If true, for instances in which the headword of a note already exists in the deck, 
+                          overwrite its content. Ignore otherwise.
 
-        :return A list of tuples. Each tuple represents one note created / modified and contains the note's ID and whether its headword already existed in the deck.
+        :return A list of tuples. Each tuple represents one note created / modified and contains the note's ID 
+                and whether its headword already existed in the deck.
         """
         collection = mw.col
         field_values = [card[f] for f in self.fields]

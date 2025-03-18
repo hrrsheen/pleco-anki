@@ -12,7 +12,7 @@ TONE_MAP = {
 
 VOWELS = "aeiouü"
 
-WORD_PATTERN = r"([a-zA-Z]{2,})([1-5]{1})?"
+WORD_PATTERN = r"([a-zA-Z']{2,})([1-5]{1})?"
 
 
 def apply_tone(pinyin: str, tone: int) -> str:
@@ -22,7 +22,7 @@ def apply_tone(pinyin: str, tone: int) -> str:
     capitalisation: list[int] = []      # Stores the position of each capital character.
     vowels_present: dict[chr, int] = {} # Stores the position of each vowel in the word.
 
-    last_vowel: int = 0
+    last_vowel: int = -1
     for i, c in enumerate(pinyin):
         # Record the position of any capitalised letters.
         if c.isupper():
@@ -47,7 +47,7 @@ def apply_tone(pinyin: str, tone: int) -> str:
         if space * space == 1:
             new_pinyin[o_pos] = TONE_MAP['o'][tone_index]
     # Otherwise the last vowel gets the tone.
-    else:
+    elif last_vowel > -1:
         test_vowel = pinyin[last_vowel]
         new_pinyin[last_vowel] = TONE_MAP[test_vowel][tone_index]
         

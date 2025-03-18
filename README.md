@@ -1,4 +1,4 @@
-# Pleco to Anki
+# Pleco Anki
 
 A plug-in for [Anki](https://apps.ankiweb.net/) that aids in the Mandarin learning workflow by simplifying the process of importing flashcards from the Chinese dictionary app [Pleco](https://www.pleco.com/).
 

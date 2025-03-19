@@ -17,6 +17,9 @@ TEMPLATE_DIR: str       = dirname(realpath(__file__)) + "/templates/" # The dire
 NOTE_TEMPLATE_FILES     = (TEMPLATE_DIR + "front.html", TEMPLATE_DIR + "back.html")
 REVERSE_TEMPLATE_FILES  = (TEMPLATE_DIR + "front_reverse.html", TEMPLATE_DIR + "back_reverse.html")
 
+ID_YES = 1
+ID_NO = 0
+
 tr = partial(QCoreApplication.translate, "Dialog")
 
 @dataclass
@@ -37,6 +40,11 @@ class ImportDialog(QDialog):
 
         # Holds the last directory that the user opened when browsing for the Pleco XML file.
         self.last_dir = str(Path.home())
+
+        self.dialog.group_reverse_buttons.setId(self.dialog.reverse_yes, ID_YES)
+        self.dialog.group_reverse_buttons.setId(self.dialog.reverse_no, ID_NO)
+        self.dialog.group_audio_buttons.setId(self.dialog.audio_yes, ID_YES)
+        self.dialog.group_audio_buttons.setId(self.dialog.audio_no, ID_NO)
 
         # Populate the decks menu with options of decks to import to.
         decks = [deck.name for deck in mw.col.decks.all_names_and_ids()]
@@ -60,7 +68,8 @@ class ImportDialog(QDialog):
         deck_name = self.dialog.select_deck.currentText()
         config = ImportConfig(
             self.dialog.checkbox_overwrite.isChecked(),
-            self.dialog.checkbox_new.isChecked()
+            self.dialog.checkbox_new.isChecked(),
+            self.dialog.group_reverse_buttons.checkedId() == ID_YES
         )
 
         # Set the import operation to run in the background.
@@ -92,6 +101,10 @@ def import_pleco(xml_file: str, deck_name: str, config: ImportConfig):
     deck = AnkiDeck(deck_name)
     # Process all flashcards.
     for card in flashcards:
+        # Generate a reverse card if the config specifies.
+        if config.reverse:
+            card.content.reverse = "y"
+
         if card.dict_type:
             pass # TODO We'll come back to this.
         else:

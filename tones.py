@@ -12,7 +12,7 @@ TONE_MAP = {
 
 VOWELS = "aeiouü"
 
-WORD_PATTERN = r"([a-zA-Z']{2,})([1-5]{1})?"
+WORD_PATTERN = r"([a-zA-Z'ü]{2,})([1-5]{1})?"
 
 
 def apply_tone(pinyin: str, tone: int) -> str:

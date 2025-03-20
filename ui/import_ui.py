@@ -30,7 +30,7 @@ class Ui_Dialog(object):
         self.layout_button.addWidget(self.button_import, 0, 1, 1, 1)
         self.gridLayout.addLayout(self.layout_button, 0, 3, 1, 1)
         self.checkbox_overwrite = QtWidgets.QCheckBox(parent=Dialog)
-        self.checkbox_overwrite.setChecked(True)
+        self.checkbox_overwrite.setChecked(False)
         self.checkbox_overwrite.setObjectName("checkbox_overwrite")
         self.gridLayout.addWidget(self.checkbox_overwrite, 0, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)

@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 from xml.etree import ElementTree as ET
 
@@ -25,6 +26,13 @@ class Flashcard:
     dict_type:      Optional[bool] = False
     needs_check:    Optional[bool] = False
 
+def parse_pleco_file(filename: str) -> list[Flashcard]:
+    if Path(filename).suffix == ".xml":
+        return parse_pleco_xml(filename)
+    elif Path(filename).suffix == ".txt":
+        return parse_pleco_txt(filename)
+
+    return []
 
 def parse_pleco_xml(filename: str) -> list[Flashcard]:
     """Returns a list of Flashcard objects that contain the parsed and formatted data from a Pleco flashcard XML export."""
@@ -57,7 +65,7 @@ def parse_pleco_txt(filename: str) -> list[Flashcard]:
 
     # https://regex101.com/r/oRAWLT/1
     card_re = r"((?:[\u4E00-\u9FFF。，])+)\t((?:[a-zA-Zü'。，.,]+[1-5]?[ (?:\/\/)。]*)+)\t(.+)"
-    with open(filename, "r") as f:
+    with open(filename, mode="r", encoding='utf-8-sig') as f:
         flashcard_all = f.read()
     cards = re.findall(card_re, flashcard_all)
 
@@ -72,7 +80,6 @@ def parse_pleco_txt(filename: str) -> list[Flashcard]:
             flashcards.append(Flashcard(NoteContent(headword, convert_numeric_sentence(pron), defn)))
 
     return flashcards
-        
         
 
 def parse_dict_card(headword: str, pron: str, defn: str) -> Flashcard:

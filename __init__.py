@@ -10,7 +10,7 @@ from aqt.qt import *  # import all of the Qt GUI library
 from aqt.utils import qconnect  # import the "show info" tool from utils.py
 
 from .anki_manip import AnkiDeck, AnkiNotes, CardTemplates
-from .pleco_import import parse_pleco_xml
+from .pleco_import import parse_pleco_file
 from .ui.import_ui import Ui_Dialog
 
 TEMPLATE_DIR: str       = dirname(realpath(__file__)) + "/templates/" # The directory path to the template files.
@@ -58,10 +58,13 @@ class ImportDialog(QDialog):
     def select_file(self):
         tr = partial(QCoreApplication.translate, "Dialog")
         
-        selected_xml, _ = QFileDialog.getOpenFileName(self, tr("Open the exported Pleco deck"), self.last_dir, "XML files (*.xml)")
-        self.last_dir = dirname(selected_xml) # Update the last directory that the user looked in.
-        if selected_xml:
-            self.dialog.line_file.setText(selected_xml)
+        selected_file, _ = QFileDialog.getOpenFileName(self, 
+                                                      tr("Open the exported Pleco deck"), 
+                                                      self.last_dir, 
+                                                      tr("Pleco export files (*.txt *.xml)"))
+        self.last_dir = dirname(selected_file) # Update the last directory that the user looked in.
+        if selected_file:
+            self.dialog.line_file.setText(selected_file)
     
     def perform_import(self):
         pleco_file = self.dialog.line_file.text()
@@ -95,7 +98,7 @@ def import_pleco(xml_file: str, deck_name: str, config: ImportConfig):
     notes_dict: Optional[AnkiNotes] = None     # Note handler for Pleco dictionary flashcards.
 
     # Read the Pleco XML file and store the data in Flashcard objects.
-    flashcards = parse_pleco_xml(xml_file)
+    flashcards = parse_pleco_file(xml_file)
     
     # Open / create the selected deck.
     deck = AnkiDeck(deck_name)

@@ -67,7 +67,7 @@ class Ui_Dialog(object):
         self.layout_options.addWidget(self.label_file, 0, 0, 1, 1)
         self.line_file = QtWidgets.QLineEdit(parent=Dialog)
         self.line_file.setDragEnabled(False)
-        self.line_file.setReadOnly(False)
+        self.line_file.setReadOnly(True)
         self.line_file.setClearButtonEnabled(False)
         self.line_file.setObjectName("line_file")
         self.layout_options.addWidget(self.line_file, 0, 1, 1, 1)
